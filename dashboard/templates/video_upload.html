@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Tracking - Upload & Analyze</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .upload-section {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .upload-wrapper {
+            position: relative;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        .upload-btn {
+            display: block !important;
+            visibility: visible !important;
+            width: 100%;
+            padding: 25px;
+            background: #667eea;
+            color: white;
+            border: 2px solid #5568d3;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 20px;
+            font-weight: bold;
+            user-select: none;
+            margin-bottom: 15px;
+            position: relative;
+            min-height: 60px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .upload-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .upload-btn:active {
+            transform: translateY(0);
+        }
+
+        .upload-btn.selected {
+            background: #28a745;
+        }
+
+        .upload-btn.selected:hover {
+            background: #218838;
+        }
+
+        #videoFileInput {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 10;
+            font-size: 0;
+        }
+
+        .file-name {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .process-btn {
+            width: 100%;
+            padding: 15px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+            margin-top: 15px;
+            display: none;
+            transition: background 0.3s;
+        }
+
+        .process-btn:hover {
+            background: #218838;
+        }
+
+        .process-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .video-preview-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        video {
+            width: 100%;
+            display: block;
+        }
+
+        .canvas-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .progress-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #f0f0f0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .status-text {
+            text-align: center;
+            color: #666;
+            font-size: 16px;
+        }
+
+        .analysis-btn {
+            width: 100%;
+            padding: 20px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            display: none;
+            transition: background 0.3s;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .analysis-btn:hover {
+            background: #ee5a5a;
+        }
+
+        .stats-display {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📹 Video Employee Tracking</h1>
+            <p>Upload a video to track employee activities</p>
+        </div>
+
+        <div class="upload-section">
+            <h3 style="margin-bottom: 15px; color: #333;">Step 1: Select Video File</h3>
+            <div class="upload-wrapper">
+                <button type="button" class="upload-btn" id="uploadBtn" style="display: block !important; visibility: visible !important;">
+                    📁 Click to Select Video File
+                </button>
+                <input type="file" id="videoFileInput" accept="video/*">
+            </div>
+            <div class="file-name" id="fileName"></div>
+            <button class="process-btn" id="processBtn" style="display: none;">Start Processing</button>
+        </div>
+
+        <div class="video-preview-section" id="videoSection">
+            <h2 style="margin-bottom: 15px; text-align: center;">Live Tracking Preview</h2>
+            <div class="video-container">
+                <video id="videoPlayer" controls></video>
+                <canvas id="overlayCanvas" class="canvas-overlay"></canvas>
+            </div>
+        </div>
+
+        <div class="progress-section" id="progressSection">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill">0%</div>
+            </div>
+            <div class="status-text" id="statusText">Initializing...</div>
+        </div>
+
+        <div class="stats-display" id="statsDisplay">
+            <h2 style="margin-bottom: 15px;">Tracking Statistics</h2>
+            <div id="statsContent"></div>
+        </div>
+
+        <a href="/dashboard" class="analysis-btn" id="analysisBtn">
+            📊 See Analysis Dashboard
+        </a>
+    </div>
+
+    <script>
+        const videoFileInput = document.getElementById('videoFileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const fileNameDiv = document.getElementById('fileName');
+        const processBtn = document.getElementById('processBtn');
+        const videoSection = document.getElementById('videoSection');
+        const videoPlayer = document.getElementById('videoPlayer');
+        const overlayCanvas = document.getElementById('overlayCanvas');
+        const progressSection = document.getElementById('progressSection');
+        const progressFill = document.getElementById('progressFill');
+        const statusText = document.getElementById('statusText');
+        const statsDisplay = document.getElementById('statsDisplay');
+        const statsContent = document.getElementById('statsContent');
+        const analysisBtn = document.getElementById('analysisBtn');
+
+        let selectedFile = null;
+        let processing = false;
+
+        // Debug: Check if elements exist
+        console.log('Upload button:', uploadBtn);
+        console.log('File input:', videoFileInput);
+        
+        if (!uploadBtn) {
+            console.error('Upload button not found!');
+            alert('Error: Upload button not found. Please refresh the page.');
+        }
+        
+        if (!videoFileInput) {
+            console.error('File input not found!');
+            alert('Error: File input not found. Please refresh the page.');
+        }
+
+        // Handle file selection directly from input
+        videoFileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            console.log('File input changed, file:', file);
+            
+            if (file) {
+                // Validate file type
+                if (!file.type.startsWith('video/')) {
+                    alert('Please select a valid video file!');
+                    this.value = ''; // Clear the input
+                    return;
+                }
+                
+                selectedFile = file;
+                const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+                
+                // Update UI
+                fileNameDiv.textContent = `✓ Selected: ${file.name} (${fileSizeMB} MB)`;
+                fileNameDiv.style.display = 'block';
+                fileNameDiv.style.color = '#28a745';
+                fileNameDiv.style.fontWeight = 'bold';
+                
+                processBtn.style.display = 'block';
+                
+                // Update button
+                uploadBtn.textContent = '✓ File Selected - Click to Change';
+                uploadBtn.classList.add('selected');
+                
+                // Preview video
+                const url = URL.createObjectURL(file);
+                videoPlayer.src = url;
+                videoSection.style.display = 'block';
+                
+                // Set canvas size when video loads
+                videoPlayer.addEventListener('loadedmetadata', () => {
+                    overlayCanvas.width = videoPlayer.videoWidth;
+                    overlayCanvas.height = videoPlayer.videoHeight;
+                    console.log('Video metadata loaded:', videoPlayer.videoWidth, 'x', videoPlayer.videoHeight);
+                }, { once: true });
+                
+                // Handle video errors
+                videoPlayer.addEventListener('error', (e) => {
+                    console.error('Video load error:', e);
+                    alert('Error loading video. Please try a different file.');
+                });
+                
+                console.log('File selected successfully:', file.name);
+            } else {
+                console.log('No file selected');
+                resetFileSelection();
+            }
+        });
+
+        // Reset file selection
+        function resetFileSelection() {
+            selectedFile = null;
+            uploadBtn.textContent = '📁 Click to Select Video File';
+            uploadBtn.classList.remove('selected');
+            fileNameDiv.style.display = 'none';
+            processBtn.style.display = 'none';
+            videoSection.style.display = 'none';
+            videoPlayer.src = '';
+            videoFileInput.value = '';
+        }
+
+        // Make button click trigger file input
+        uploadBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Upload button clicked, triggering file input');
+            videoFileInput.click();
+        });
+
+        // Also handle direct clicks on the wrapper
+        document.querySelector('.upload-wrapper').addEventListener('click', function(e) {
+            if (e.target === this || e.target === uploadBtn) {
+                e.preventDefault();
+                videoFileInput.click();
+            }
+        });
+
+        // Handle process button
+        processBtn.addEventListener('click', async () => {
+            if (!selectedFile || processing) {
+                console.log('Cannot process:', { selectedFile: !!selectedFile, processing });
+                return;
+            }
+
+            console.log('Starting video processing...');
+            processing = true;
+            processBtn.disabled = true;
+            processBtn.textContent = 'Processing...';
+            progressSection.style.display = 'block';
+            statsDisplay.style.display = 'block';
+
+            const formData = new FormData();
+            formData.append('video', selectedFile);
+
+            try {
+                // Start video processing
+                console.log('Sending request to /api/process_video');
+                const response = await fetch('/api/process_video', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                console.log('Response status:', response.status);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Error response:', errorText);
+                    throw new Error(`Processing failed: ${response.status} - ${errorText}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n').filter(line => line.trim());
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.substring(6));
+                                
+                                if (data.type === 'progress') {
+                                    const percent = Math.round(data.progress);
+                                    progressFill.style.width = percent + '%';
+                                    progressFill.textContent = percent + '%';
+                                    statusText.textContent = data.status || `Processing: ${percent}%`;
+                                } else if (data.type === 'frame') {
+                                    // Draw detections on canvas
+                                    drawDetections(data.detections);
+                                } else if (data.type === 'complete') {
+                                    statusText.textContent = 'Processing Complete!';
+                                    progressFill.style.width = '100%';
+                                    progressFill.textContent = '100%';
+                                    analysisBtn.style.display = 'block';
+                                    
+                                    // Show statistics
+                                    if (data.stats) {
+                                        displayStats(data.stats);
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('Error parsing data:', e);
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                statusText.textContent = 'Error: ' + error.message;
+                statusText.style.color = '#ff0000';
+                alert('Error processing video: ' + error.message);
+            } finally {
+                processing = false;
+                processBtn.disabled = false;
+                processBtn.textContent = 'Start Processing';
+            }
+        });
+
+        // Add visual feedback
+        uploadBtn.addEventListener('mousedown', function() {
+            if (!this.classList.contains('selected')) {
+                this.style.transform = 'scale(0.98)';
+            }
+        });
+        
+        uploadBtn.addEventListener('mouseup', function() {
+            this.style.transform = '';
+        });
+
+        function drawDetections(detections) {
+            const ctx = overlayCanvas.getContext('2d');
+            ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+            if (!detections) return;
+
+            // Draw person boxes
+            if (detections.persons) {
+                detections.persons.forEach(person => {
+                    const [x1, y1, x2, y2] = person.bbox;
+                    ctx.strokeStyle = '#00ff00';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+                    ctx.fillStyle = '#00ff00';
+                    ctx.font = '14px Arial';
+                    ctx.fillText(`Person ${person.id}`, x1, y1 - 5);
+                });
+            }
+
+            // Draw chairs
+            if (detections.chairs) {
+                detections.chairs.forEach(chair => {
+                    const [x1, y1, x2, y2] = chair;
+                    ctx.strokeStyle = '#ff0000';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+                });
+            }
+
+            // Draw phones
+            if (detections.phones) {
+                detections.phones.forEach(phone => {
+                    const [x1, y1, x2, y2] = phone;
+                    ctx.strokeStyle = '#0000ff';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+                });
+            }
+        }
+
+        function displayStats(stats) {
+            let html = '';
+            for (const [personId, data] of Object.entries(stats)) {
+                html += `
+                    <div class="stat-item">
+                        <span><strong>Person ${personId}</strong></span>
+                        <span></span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Total Sitting Time:</span>
+                        <span>${formatDuration(data.sitting_duration || 0)}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Phone Usage Time:</span>
+                        <span>${formatDuration(data.phone_duration || 0)}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Phone Events:</span>
+                        <span>${data.phone_events || 0}</span>
+                    </div>
+                `;
+            }
+            statsContent.innerHTML = html;
+        }
+
+        function formatDuration(seconds) {
+            if (seconds < 60) {
+                return `${Math.round(seconds)}s`;
+            } else if (seconds < 3600) {
+                return `${Math.round(seconds / 60)}m`;
+            } else {
+                const hours = Math.floor(seconds / 3600);
+                const minutes = Math.round((seconds % 3600) / 60);
+                return `${hours}h ${minutes}m`;
+            }
+        }
+    </script>
+</body>
+</html>
+

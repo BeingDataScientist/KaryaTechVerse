@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Behavior Tracking Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+        }
+
+        .header a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .header a:hover {
+            text-decoration: underline;
+        }
+
+        .employee-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .employee-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .employee-header h2 {
+            color: #333;
+            margin: 0;
+        }
+
+        .employee-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .employee-stat {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .employee-stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .employee-stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-card h3 {
+            color: #666;
+            font-size: 14px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-container h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+
+        .refresh-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .refresh-indicator.updating {
+            color: #667eea;
+        }
+
+        .refresh-indicator.updated {
+            color: #28a745;
+        }
+
+        canvas {
+            max-height: 400px;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Behavior Tracking Dashboard</h1>
+            <p>Real-time monitoring of sitting and phone usage behavior | <a href="/">Upload Video</a></p>
+        </div>
+
+        <div class="refresh-indicator" id="refreshIndicator">
+            Last updated: <span id="lastUpdate">Never</span>
+        </div>
+
+        <div class="stats-grid" id="statsGrid">
+            <!-- Stats cards will be populated here -->
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h2>Total Sitting Duration (seconds)</h2>
+                <canvas id="sittingBarChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <h2>Total Phone Usage Duration (seconds)</h2>
+                <canvas id="phoneBarChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <h2>Phone Usage Timeline</h2>
+                <canvas id="phoneTimelineChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <h2>Sitting vs Phone Usage</h2>
+                <canvas id="comparisonPieChart"></canvas>
+            </div>
+        </div>
+
+        <div id="employeeSections">
+            <!-- Employee sections will be populated here -->
+        </div>
+    </div>
+
+    <script>
+        // Chart instances
+        let sittingBarChart = null;
+        let phoneBarChart = null;
+        let phoneTimelineChart = null;
+        let comparisonPieChart = null;
+
+        // Chart configurations
+        const chartColors = {
+            sitting: 'rgba(54, 162, 235, 0.8)',
+            phone: 'rgba(255, 99, 132, 0.8)',
+            background: 'rgba(255, 255, 255, 0.1)'
+        };
+
+        // Initialize charts
+        function initCharts() {
+            // Sitting duration bar chart
+            const sittingCtx = document.getElementById('sittingBarChart').getContext('2d');
+            sittingBarChart = new Chart(sittingCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Sitting Duration (seconds)',
+                        data: [],
+                        backgroundColor: chartColors.sitting,
+                        borderColor: chartColors.sitting.replace('0.8', '1'),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Phone usage bar chart
+            const phoneCtx = document.getElementById('phoneBarChart').getContext('2d');
+            phoneBarChart = new Chart(phoneCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Phone Usage Duration (seconds)',
+                        data: [],
+                        backgroundColor: chartColors.phone,
+                        borderColor: chartColors.phone.replace('0.8', '1'),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Phone usage timeline
+            const timelineCtx = document.getElementById('phoneTimelineChart').getContext('2d');
+            phoneTimelineChart = new Chart(timelineCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Phone Usage Duration',
+                        data: [],
+                        borderColor: chartColors.phone,
+                        backgroundColor: chartColors.phone.replace('0.8', '0.2'),
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Comparison pie chart
+            const pieCtx = document.getElementById('comparisonPieChart').getContext('2d');
+            comparisonPieChart = new Chart(pieCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Sitting', 'Phone Usage'],
+                    datasets: [{
+                        data: [0, 0],
+                        backgroundColor: [chartColors.sitting, chartColors.phone],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true
+                }
+            });
+        }
+
+        // Update stats cards
+        function updateStatsCards(data) {
+            const statsGrid = document.getElementById('statsGrid');
+            
+            if (!data || data.length === 0) {
+                statsGrid.innerHTML = '<div class="stat-card"><div class="no-data">No data available yet</div></div>';
+                return;
+            }
+
+            // Calculate totals
+            let totalSitting = 0;
+            let totalPhone = 0;
+            let totalPhoneEvents = 0;
+            let totalPersons = data.length;
+
+            data.forEach(person => {
+                totalSitting += person.total_sitting_duration || 0;
+                totalPhone += person.total_phone_duration || 0;
+                totalPhoneEvents += person.phone_event_count || 0;
+            });
+
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <h3>Total Persons Tracked</h3>
+                    <div class="value">${totalPersons}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Sitting Time</h3>
+                    <div class="value">${formatDuration(totalSitting)}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Phone Usage</h3>
+                    <div class="value">${formatDuration(totalPhone)}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Phone Usage Events</h3>
+                    <div class="value">${totalPhoneEvents}</div>
+                </div>
+            `;
+        }
+
+        // Format duration in seconds to readable format
+        function formatDuration(seconds) {
+            if (seconds < 60) {
+                return `${Math.round(seconds)}s`;
+            } else if (seconds < 3600) {
+                return `${Math.round(seconds / 60)}m`;
+            } else {
+                const hours = Math.floor(seconds / 3600);
+                const minutes = Math.round((seconds % 3600) / 60);
+                return `${hours}h ${minutes}m`;
+            }
+        }
+
+        // Update charts with data
+        function updateCharts(data) {
+            if (!data || data.length === 0) {
+                return;
+            }
+
+            // Prepare data
+            const personLabels = data.map(p => `Person ${p.person_id}`);
+            const sittingData = data.map(p => p.total_sitting_duration || 0);
+            const phoneData = data.map(p => p.total_phone_duration || 0);
+
+            // Update sitting bar chart
+            sittingBarChart.data.labels = personLabels;
+            sittingBarChart.data.datasets[0].data = sittingData;
+            sittingBarChart.update();
+
+            // Update phone bar chart
+            phoneBarChart.data.labels = personLabels;
+            phoneBarChart.data.datasets[0].data = phoneData;
+            phoneBarChart.update();
+
+            // Update comparison pie chart
+            const totalSitting = sittingData.reduce((a, b) => a + b, 0);
+            const totalPhone = phoneData.reduce((a, b) => a + b, 0);
+            comparisonPieChart.data.datasets[0].data = [totalSitting, totalPhone];
+            comparisonPieChart.update();
+        }
+
+        // Update phone timeline
+        function updatePhoneTimeline(timelineData) {
+            if (!timelineData || timelineData.length === 0) {
+                return;
+            }
+
+            // Sort by start_time and take last 20 events
+            const sortedData = timelineData
+                .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
+                .slice(-20);
+
+            const labels = sortedData.map(event => {
+                const date = new Date(event.start_time);
+                return date.toLocaleTimeString();
+            });
+            const durations = sortedData.map(event => event.duration || 0);
+
+            phoneTimelineChart.data.labels = labels;
+            phoneTimelineChart.data.datasets[0].data = durations;
+            phoneTimelineChart.update();
+        }
+
+        // Update employee sections
+        async function updateEmployeeSections(data) {
+            const employeeSections = document.getElementById('employeeSections');
+            
+            if (!data || data.length === 0) {
+                employeeSections.innerHTML = '';
+                return;
+            }
+
+            let html = '<h2 style="color: white; margin: 20px 0;">Employee Activity Breakdown</h2>';
+            
+            for (const person of data) {
+                const personId = person.person_id;
+                
+                // Fetch detailed employee stats
+                try {
+                    const empResponse = await fetch(`/api/stats/employee/${personId}`);
+                    const empData = await empResponse.json();
+                    
+                    html += `
+                        <div class="employee-section">
+                            <div class="employee-header">
+                                <h2>👤 Employee ${personId}</h2>
+                            </div>
+                            <div class="employee-stats">
+                                <div class="employee-stat">
+                                    <div class="employee-stat-label">Total Sitting Time</div>
+                                    <div class="employee-stat-value">${formatDuration(empData.sitting.total_duration || 0)}</div>
+                                </div>
+                                <div class="employee-stat">
+                                    <div class="employee-stat-label">Sitting Events</div>
+                                    <div class="employee-stat-value">${empData.sitting.event_count || 0}</div>
+                                </div>
+                                <div class="employee-stat">
+                                    <div class="employee-stat-label">Phone Usage Time</div>
+                                    <div class="employee-stat-value">${formatDuration(empData.phone.total_duration || 0)}</div>
+                                </div>
+                                <div class="employee-stat">
+                                    <div class="employee-stat-label">Phone Usage Events</div>
+                                    <div class="employee-stat-value">${empData.phone.event_count || 0}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } catch (error) {
+                    console.error(`Error fetching stats for person ${personId}:`, error);
+                }
+            }
+            
+            employeeSections.innerHTML = html;
+        }
+
+        // Fetch and update all data
+        async function updateDashboard() {
+            const indicator = document.getElementById('refreshIndicator');
+            const lastUpdate = document.getElementById('lastUpdate');
+            
+            indicator.classList.add('updating');
+            indicator.classList.remove('updated');
+
+            try {
+                // Fetch combined stats
+                const statsResponse = await fetch('/api/stats/combined');
+                const statsData = await statsResponse.json();
+                updateStatsCards(statsData);
+                updateCharts(statsData);
+                updateEmployeeSections(statsData);
+
+                // Fetch phone timeline
+                const timelineResponse = await fetch('/api/timeline/phone');
+                const timelineData = await timelineResponse.json();
+                updatePhoneTimeline(timelineData);
+
+                // Update indicator
+                lastUpdate.textContent = new Date().toLocaleTimeString();
+                indicator.classList.remove('updating');
+                indicator.classList.add('updated');
+            } catch (error) {
+                console.error('Error updating dashboard:', error);
+                indicator.classList.remove('updating');
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            initCharts();
+            updateDashboard();
+            
+            // Auto-refresh every 3 seconds
+            setInterval(updateDashboard, 3000);
+        });
+    </script>
+</body>
+</html>
+
