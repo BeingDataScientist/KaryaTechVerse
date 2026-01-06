@@ -54,5 +54,10 @@ Thumbs.db
 
 # Project specific
 tracking_events.db
+tracking_events.db-journal
+tracking_events.db-wal
+tracking_events.db-shm
 yolov8n.pt
+*.task
+dashboard/uploads/
 
